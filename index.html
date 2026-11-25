@@ -1,15 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Game</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div id="game-container"></div>
-    <div id="score"></div>
-    <script src="script.js"></script>
-</body>
-</html>
-
+<!doctype html>
+<html lang="fi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BNT Tech — Snake</title>
+<style>
+:root{color-scheme:dark;--line:#263443;--text:#e8eef5;--muted:#8293a5;--accent:#55d6a3}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:transparent;color:var(--text);font:14px/1.5 Inter,system-ui,Segoe UI,sans-serif;display:grid;place-items:center;padding:12px}
+.shell{width:min(100%,620px);background:linear-gradient(145deg,#111b25,#0b1118);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 18px 50px #0005}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.brand{font-weight:750;letter-spacing:.12em;font-size:12px;color:var(--accent)}.status{font-size:11px;color:var(--accent);display:flex;align-items:center;gap:7px}.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.stats{display:flex;gap:10px;margin-bottom:12px}.stat{background:#0a1118;border:1px solid #202e3b;border-radius:9px;padding:8px 12px;flex:1}.stat small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em}.stat strong{font-size:19px;font-variant-numeric:tabular-nums}
+canvas{display:block;width:100%;aspect-ratio:1;background:#080e14;border:1px solid #263443;border-radius:9px;image-rendering:pixelated}
+.bottom{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;color:var(--muted);font-size:11px}.bottom b{color:var(--text);font-weight:600}.tag{color:var(--accent)}
+@media(max-width:420px){.shell{padding:12px}.bottom{font-size:10px}}
+</style></head><body><main class="shell">
+<div class="top"><div class="brand">BNT TECH <span style="color:#718396">/ ARCADE</span></div><div class="status"><i class="dot"></i> AUTOPILOT ACTIVE</div></div>
+<div class="stats"><div class="stat"><small>Score</small><strong id="score">0</strong></div><div class="stat"><small>Best run</small><strong id="best">0</strong></div><div class="stat"><small>Runs</small><strong id="runs">1</strong></div></div>
+<canvas id="game" width="480" height="480" aria-label="Automaattisesti pelaava Snake-peli"></canvas>
+<div class="bottom"><span><b>SELF-PLAY MODE</b> · Käärme pelaa itsenäisesti</span><span class="tag">CRASH → RESTART</span></div>
+</main><script>
+(()=>{const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),N=24,C=20,scoreEl=document.getElementById('score'),bestEl=document.getElementById('best'),runsEl=document.getElementById('runs');let snake,food,dir,score,best=0,runs=1,crashPause=0,plannedCrash=false;const dirs=[{x:1,y:0},{x:0,y:1},{x:-1,y:0},{x:0,y:-1}];
+function freeCell(){let p;do{p={x:Math.floor(Math.random()*N),y:Math.floor(Math.random()*N)}}while(snake.some(s=>s.x===p.x&&s.y===p.y));return p}
+function reset(){snake=[{x:12,y:12},{x:11,y:12},{x:10,y:12}];dir=0;food=freeCell();score=0;plannedCrash=false;scoreEl.textContent='0';runsEl.textContent=runs}
+function collides(d){const h={x:snake[0].x+d.x,y:snake[0].y+d.y};return h.x<0||h.y<0||h.x>=N||h.y>=N||snake.slice(0,-1).some(s=>s.x===h.x&&s.y===h.y)}
+function chooseDirection(){const head=snake[0],opts=dirs.map((d,i)=>({d,i,dist:Math.abs(head.x+d.x-food.x)+Math.abs(head.y+d.y-food.y),bad:collides(d)})).filter(o=>o.i!==(dir+2)%4);
+if(!plannedCrash&&Math.random()<.018){const fatal=opts.filter(o=>o.bad);if(fatal.length){plannedCrash=true;return fatal[Math.floor(Math.random()*fatal.length)].i}}
+const safe=opts.filter(o=>!o.bad);if(!safe.length)return opts[Math.floor(Math.random()*opts.length)].i;safe.sort((a,b)=>a.dist-b.dist);if(Math.random()<.20)return safe[Math.floor(Math.random()*safe.length)].i;const near=safe.filter(o=>o.dist<=safe[0].dist+2);return near[Math.floor(Math.random()*near.length)].i}
+function draw(){ctx.clearRect(0,0,480,480);ctx.fillStyle='#080e14';ctx.fillRect(0,0,480,480);ctx.strokeStyle='#14212c';ctx.lineWidth=1;for(let i=0;i<=N;i++){let p=i*C+.5;ctx.beginPath();ctx.moveTo(p,0);ctx.lineTo(p,480);ctx.stroke();ctx.beginPath();ctx.moveTo(0,p);ctx.lineTo(480,p);ctx.stroke()}ctx.fillStyle='#ff667a';ctx.shadowColor='#ff667a';ctx.shadowBlur=14;ctx.beginPath();ctx.arc(food.x*C+10,food.y*C+10,6,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;snake.forEach((s,i)=>{ctx.fillStyle=i===0?'#8fffd0':'#42b98b';ctx.shadowColor=i===0?'#55d6a3':'transparent';ctx.shadowBlur=i===0?12:0;ctx.beginPath();ctx.roundRect(s.x*C+2,s.y*C+2,C-4,C-4,5);ctx.fill()});ctx.shadowBlur=0}
+function step(){if(crashPause>0){crashPause--;if(crashPause===0){runs++;reset()}draw();return}dir=chooseDirection();const d=dirs[dir],head={x:snake[0].x+d.x,y:snake[0].y+d.y};if(head.x<0||head.y<0||head.x>=N||head.y>=N||snake.slice(0,-1).some(s=>s.x===head.x&&s.y===head.y)){crashPause=12;draw();return}snake.unshift(head);if(head.x===food.x&&head.y===food.y){score++;scoreEl.textContent=score;best=Math.max(best,score);bestEl.textContent=best;food=freeCell()}else snake.pop();draw()}
+reset();draw();setInterval(step,105)})();
+</script></body></html>
